@@ -6,8 +6,13 @@ configDotenv.config()
 connectDb()
 
 
+app.get('/',(req,res)=>{
 
-app.listen(3000,(req,res)=>{
+    res.json("this is working")
+})
+
+app.listen(3000,()=>{
+    
     
     console.log("Server is the Started....")
 
