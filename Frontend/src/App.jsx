@@ -1,11 +1,19 @@
-
+import { Routes,Route } from "react-router-dom"
+import Login from "./page/login"
+import Signup from "./page/Register"
+import HomePage from "./page/HomePage"
 
 function App() {
   
 
   return (
     <>
-     <div>This is the Frontend off the Backend</div>
+    <Routes>
+      <Route path="/" element={<HomePage/>} />
+      <Route path="/login" element={<Login/>} />
+      <Route path="/signup" element={<Signup/>} />
+    </Routes>
+
     </>
   )
 }

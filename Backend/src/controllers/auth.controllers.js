@@ -46,7 +46,7 @@ async function register(req, res) {
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            sameSite: "lax",
         });
 
         const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex")
