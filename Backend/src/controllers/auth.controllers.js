@@ -6,31 +6,23 @@ import sessionModel from "../models/session.models.js";
 
 
 async function register(req, res) {
-
     try {
-
         const { username, email, password } = req.body;
 
         if (!username || !email || !password) {
-            return res.status(400).json({
-                message: "All fields are required."
-            })
+            return res.status(400).json({ message: "All fields are required." })
         }
 
         const shortEmail = email.toLowerCase()
         const shortUsername = username.toLowerCase();
 
         const isExistUser = await userModel.findOne({
-            $or: [{ username: shortUsername },
-            { email: shortEmail }]
+            $or: [{ username: shortUsername }, { email: shortEmail }]
         })
 
         if (isExistUser) {
-            return res.status(409).json({
-                message: "User already exists"
-            })
+            return res.status(409).json({ message: "User already exists" })
         }
-
 
         const passwordHash = await bcrypt.hash(password, 10);
 
@@ -42,16 +34,15 @@ async function register(req, res) {
 
         const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN, { expiresIn: "7d" })
 
-
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            secure: process.env.NODE_ENV === "production", // ✅ fixed
             sameSite: "lax",
         });
 
         const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex")
 
-        const session = await sessionModel.create({
+        await sessionModel.create({
             userId: user._id,
             ip: req.ip,
             userAgent: req.headers["user-agent"],
@@ -60,67 +51,45 @@ async function register(req, res) {
 
         const accessToken = jwt.sign({ id: user._id }, process.env.ACCESS_TOKEN, { expiresIn: "15m" })
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "user Created",
-            user: {
-                username: user.username,
-                email: user.email,
-            },
+            user: { username: user.username, email: user.email },
             accessToken,
         })
 
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
     }
-    catch (error) {
-        res.status(500).json({
-            message: error.message,
-        })
-    }
-
-
 }
+
 
 async function login(req, res) {
     try {
-
         const { email, password } = req.body
 
         if (!email || !password) {
-            return res.status(400).json({
-                message: "Field is required."
-            })
+            return res.status(400).json({ message: "Field is required." })
         }
 
         const shortEmail = email.toLowerCase();
-
-
-        const user = await userModel.findOne({
-            email: shortEmail,
-        })
+        const user = await userModel.findOne({ email: shortEmail })
 
         if (!user) {
-            return res.status(401).json({
-                message: "user does not Exists"
-            })
+            return res.status(401).json({ message: "User does not exist" })
         }
-
 
         const checkPassword = await bcrypt.compare(password, user.password);
 
         if (!checkPassword) {
-            return res.status(401).json({
-                message: "Invalid credentials"
-            })
+            return res.status(401).json({ message: "Invalid credentials" })
         }
 
-
-        const refreshToken = jwt.sign({
-            id: user._id,
-        }, process.env.REFRESH_TOKEN, { expiresIn: "7d" })
+        const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN, { expiresIn: "7d" })
 
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: "strict",
+            secure: process.env.NODE_ENV === "production", // ✅ was hardcoded true, broke localhost
+            sameSite: "lax",                               // ✅ was strict, changed to lax for dev
         })
 
         const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex")
@@ -132,60 +101,37 @@ async function login(req, res) {
             userAgent: req.headers["user-agent"]
         })
 
+        const accessToken = jwt.sign({ id: user._id }, process.env.ACCESS_TOKEN, { expiresIn: "15m" })
 
-        const accessToken = jwt.sign({ id: user._id },
-            process.env.ACCESS_TOKEN,
-            { expiresIn: "15m" })
-
-
-        res.status(200).json({
+        return res.status(200).json({
             message: "Login successfully",
-            user: {
-                username: user.username,
-                email: user.email,
-            },
+            user: { username: user.username, email: user.email },
             accessToken,
         })
 
-
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
     }
-    catch (error) {
-
-        res.status(500).json({
-
-            message: error.message,
-        })
-    }
-
 }
 
+
 async function logout(req, res) {
-
     try {
-
         const refreshToken = req.cookies.refreshToken;
 
-        if(!refreshToken){
-            res.status(400).json({
-                message:"Token not found"
-            })
+        if (!refreshToken) {
+            return res.status(400).json({ message: "Token not found" }) // ✅ added return
         }
 
         const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex")
 
-        console.log(refreshTokenHash)
-
         const session = await sessionModel.findOne({
-            refreshTokenHash:refreshTokenHash,
+            refreshTokenHash: refreshTokenHash,
             revoke: false,
         })
 
-        console.log(session)
-
         if (!session) {
-            return res.status(401).json({
-                message: "Invalid Token"
-            })
+            return res.status(401).json({ message: "Invalid Token" })
         }
 
         session.revoke = true
@@ -193,96 +139,69 @@ async function logout(req, res) {
 
         res.clearCookie("refreshToken")
 
-        res.status(200).json({
-            message: "Logout successfully"
-        })
+        return res.status(200).json({ message: "Logout successfully" })
+
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
     }
-    catch (error) {
-        res.status(500).json({
-            message: error.message
-        })
-    }
-
-
-
 }
+
 
 async function logoutAll(req, res) {
-
-    try{
-
+    try {
         const refreshToken = req.cookies.refreshToken;
 
-    if (!refreshToken) {
-        res.status(401).json({
-            message: "Token not found."
-        })
+        if (!refreshToken) {
+            return res.status(401).json({ message: "Token not found." }) // ✅ added return
+        }
+
+        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN)
+
+        if (!decoded) {
+            return res.status(401).json({ message: "Invalid token." }) // ✅ added return
+        }
+
+        await sessionModel.updateMany(
+            { userId: decoded.id, revoke: false },
+            { revoke: true }
+        )
+
+        res.clearCookie("refreshToken")
+
+        return res.status(200).json({ message: "Logged out from all sessions" })
+
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
     }
-
-    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN)
-
-    if(!decoded){
-        res.status(401).json({
-            message:"Invalid token."
-        })
-    }
-
-    await sessionModel.updateMany({
-        userId: decoded.id,
-        revoke: false
-    }, { revoke: true }
-    )
-
-       res.clearCookie("refreshToken")
-
-     return res.status(200).json({
-        message:"Logged out from all sessions "
-    })
-
-    }catch (error) {
-
-        res.status(500).json({
-
-            message: error.message,
-        })
-    }
-
-
 }
 
-async function genrateRefresh(req,res){
 
-    try{
+async function genrateRefresh(req, res) {
+    try {
+        const refreshToken = req.cookies.refreshToken;
 
- const refreshToken = req.cookies.refreshToken;
+        if (!refreshToken) {
+            return res.status(401).json({ message: "No token" }) // ✅ added return
+        }
 
-    if(!refreshToken){
-        res.status(401).json({
-            message : "No token"
-        })
-    }
+        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN)
 
-    const decoded = jwt.verify(refreshToken,process.env.REFRESH_TOKEN)
-    const refreshTokenHash = crypto
+        const refreshTokenHash = crypto
             .createHash("sha256")
             .update(refreshToken)
             .digest("hex");
 
+        const session = await sessionModel.findOne({
+            userId: decoded.id,
+            refreshTokenHash,
+            revoke: false
+        })
 
-    const session = await sessionModel.findOne({
-        userId:decoded.id,
-        refreshTokenHash,
-        revoke:false
+        if (!session) {
+            return res.status(401).json({ message: "Invalid session" });
+        }
 
-           })
-
-         if (!session) {
-         return res.status(401).json({
-              message: "Invalid session"
-          });
-         }
-
-         session.revoke = true;
+        session.revoke = true;
         await session.save();
 
         const newRefreshToken = jwt.sign(
@@ -306,7 +225,7 @@ async function genrateRefresh(req,res){
         res.cookie("refreshToken", newRefreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            sameSite: "lax", // ✅ changed from strict to lax for dev
         });
 
         const accessToken = jwt.sign(
@@ -317,15 +236,9 @@ async function genrateRefresh(req,res){
 
         return res.json({ accessToken });
 
+    } catch (err) {
+        return res.status(401).json({ message: "Invalid refresh token" });
     }
-   
-    catch (err) {
-        return res.status(401).json({
-            message: "Invalid refresh token"
-        });
-    }
-    
-    
 }
 
 

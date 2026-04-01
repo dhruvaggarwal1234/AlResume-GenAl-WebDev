@@ -1,10 +1,48 @@
 import { useNavigate } from "react-router-dom";
+import { login } from "../api/auth.api";
+import { useState } from "react";
 
-function Login() 
-
-{
+function Login() {
    const navigate = useNavigate();
-  return (
+
+   const [formData, setFormData] = useState({
+       email: "",
+       password: "",
+     });
+  
+
+   const handleChange = (e) =>{
+
+    setFormData({
+      ...formData,
+      [e.target.name]:e.target.value,
+    });
+   }
+
+
+
+  const handleSubmit = async (e) =>{
+    e.preventDefault();
+
+    try{
+
+       await login({
+          email:formData.email,
+          password:formData.password,
+        })
+
+        navigate("/");
+
+    }catch(err){
+
+      console.log(err.message);
+
+    }
+
+  }
+  
+
+   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-200 via-gray-100 to-gray-300 px-4">
       
       {/* Card */}
@@ -18,13 +56,14 @@ function Login()
           Welcome back
         </h1>
 
-        <form className="space-y-5" autoComplete="off">
+        <form className="space-y-5" autoComplete="off" onSubmit={handleSubmit}>
 
           {/* Email */}
           <div className="flex flex-col">
             <label className="text-sm text-gray-600 mb-1">Email</label>
             <input
               type="email"
+              name="email"
               placeholder="Enter your email"
               autoComplete="new-email"
               className="px-4 py-3 rounded-xl bg-white/80 
@@ -32,6 +71,8 @@ function Login()
               border border-gray-200 
               focus:outline-none focus:ring-2 focus:ring-orange-400 
               focus:shadow-lg transition duration-300"
+              value={formData.email}
+              onChange={handleChange}
             />
           </div>
 
@@ -40,6 +81,7 @@ function Login()
             <label className="text-sm text-gray-600 mb-1">Password</label>
             <input
               type="password"
+              name="password"
               placeholder="Enter your password"
               autoComplete="new-password"
               className="px-4 py-3 rounded-xl bg-white/80 
@@ -47,6 +89,8 @@ function Login()
               border border-gray-200 
               focus:outline-none focus:ring-2 focus:ring-orange-400 
               focus:shadow-lg transition duration-300"
+              value={formData.password}
+              onChange={handleChange}
             />
           </div>
 

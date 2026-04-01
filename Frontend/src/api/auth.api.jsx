@@ -1,10 +1,6 @@
-import axios from "axios";
+import API from "./axios";
 import { setAccessToken } from "../utils/token";
 
-const API = axios.create({
-  baseURL: "http://localhost:3000/api/auth",
-  withCredentials: true, // 🔥 MUST for cookies
-});
 
 // LOGIN
 export async function login(data) {
