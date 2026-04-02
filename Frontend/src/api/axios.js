@@ -3,10 +3,10 @@ import { getAccessToken, setAccessToken, clearAccessToken } from "../utils/token
 
 const API = axios.create({
   baseURL: "http://localhost:3000/api/auth",
-  withCredentials: true, // 🔥 needed for cookies
+  withCredentials: true, 
 });
 
-// 🔐 Attach token
+
 API.interceptors.request.use((config) => {
   const token = getAccessToken();
 
@@ -17,7 +17,7 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// 🔁 Refresh logic
+
 API.interceptors.response.use(
   (res) => res,
   async (err) => {

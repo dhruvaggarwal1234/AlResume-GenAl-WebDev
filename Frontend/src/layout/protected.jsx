@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { getAccessToken, setAccessToken } from '../utils/token';
-import axios from 'axios';  // ✅ use plain axios, NOT your API instance
-
+import axios from 'axios'; 
 export default function Protected() {
   const [status, setStatus] = useState('checking');
 
@@ -14,7 +13,7 @@ export default function Protected() {
       return
     }
 
-    // ✅ Plain axios — bypasses your interceptor completely
+  
     axios.post('http://localhost:3000/api/auth/refresh', {}, {
       withCredentials: true
     })
